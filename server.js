@@ -84,11 +84,17 @@ app.get('/', async (req, res) => {
             // Запрос данных инвентаря пользователя
             const inventoryResponse = await axios.get(`https://steamcommunity.com/inventory/${steamID}/730/2?l=english&count=5000`);
             const inventory = inventoryResponse.data.assets;
+            const descriptions = inventoryResponse.data.descriptions;
 
             if (inventory && inventory.length > 0) {
                 html += `<p>Вот твой инвентарь CS:GO:</p><ul>`;
                 inventory.forEach(item => {
-                    html += `<li>Item ID: ${item.assetid}</li>`;
+                    const description = descriptions.find(desc => desc.classid === item.classid && desc.instanceid === item.instanceid);
+                    if (description) {
+                        html += `<li>${description.market_hash_name}</li>`;
+                    } else {
+                        html += `<li>Item ID: ${item.assetid}</li>`; // Fallback to item ID if name not found
+                    }
                 });
                 html += '</ul>';
             } else {
