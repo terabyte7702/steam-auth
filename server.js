@@ -89,22 +89,25 @@ app.get('/', async (req, res) => {
             const marketableItems = [];
             const nonMarketableItems = [];
 
-            if (inventory && inventory.length > 0) {
+            if (inventory && inventory.length > 0 && descriptions) {
                 inventory.forEach(item => {
                     const description = descriptions.find(desc => desc.classid === item.classid && desc.instanceid === item.instanceid);
                     if (description) {
-                        if (description.marketable) {
-                            marketableItems.push(description.market_hash_name);
+                        const itemName = description.market_name;
+                        const itemIcon = `https://steamcommunity-a.akamaihd.net/economy/image/${description.icon_url}`;
+
+                        if (description.marketable === 1) {
+                            marketableItems.push({ name: itemName, icon: itemIcon });
                         } else {
-                            nonMarketableItems.push(description.market_hash_name);
+                            nonMarketableItems.push({ name: itemName, icon: itemIcon });
                         }
                     }
                 });
 
                 if (marketableItems.length > 0) {
                     html += `<p>Вот твой инвентарь CS:GO:</p><ul>`;
-                    marketableItems.forEach(itemName => {
-                        html += `<li>${itemName}</li>`;
+                    marketableItems.forEach(item => {
+                        html += `<li><img src="${item.icon}" alt="${item.name}" style="width: 50px; height: 50px;"> ${item.name}</li>`;
                     });
                     html += '</ul>';
                 } else {
@@ -113,8 +116,8 @@ app.get('/', async (req, res) => {
 
                 if (nonMarketableItems.length > 0) {
                     html += `<p>Предметы которые нельзя продать:</p><ul>`;
-                    nonMarketableItems.forEach(itemName => {
-                        html += `<li>${itemName}</li>`;
+                    nonMarketableItems.forEach(item => {
+                        html += `<li><img src="${item.icon}" alt="${item.name}" style="width: 50px; height: 50px;"> ${item.name}</li>`;
                     });
                     html += '</ul>';
                 }
