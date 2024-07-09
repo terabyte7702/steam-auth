@@ -54,7 +54,7 @@ app.post('/logout', (req, res, next) => {
 // Функция для получения средней стоимости предмета
 async function getItemPriceInKZT(itemName) {
     try {
-        const response = await axios.get(`https://steamcommunity.com/market/priceoverview/?appid=730&currency=37&market_hash_name=${encodeURIComponent(itemName)}`);
+        const response = await axios.get(`https://steamcommunity.com/market/priceoverview/?appid=730&currency=5&market_hash_name=${encodeURIComponent(itemName)}`);
         if (response.data && response.data.median_price) {
             return response.data.median_price;
         } else {
