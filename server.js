@@ -18,8 +18,8 @@ app.use(passport.session());
 
 // Настройка стратегии Steam
 passport.use(new SteamStrategy({
-    returnURL: 'http://localhost:3000/auth/steam/return',
-    realm: 'http://localhost:3000/',
+    returnURL: 'https://steam-auth.vercel.app/auth/steam/return',
+    realm: 'https://steam-auth.vercel.app/',
     apiKey: '17EA696C4E9C2C11E16BDED1FFC2AC71'
 }, function(identifier, profile, done) {
     return done(null, profile);
