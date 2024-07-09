@@ -18,8 +18,8 @@ app.use(passport.session());
 
 // Настройка стратегии Steam
 passport.use(new SteamStrategy({
-    returnURL: 'https://steam-auth.vercel.app/auth/steam/return',
-    realm: 'https://steam-auth.vercel.app',
+    returnURL: 'http://localhost:3000/auth/steam/return',
+    realm: 'http://localhost:3000/',
     apiKey: '17EA696C4E9C2C11E16BDED1FFC2AC71'
 }, function(identifier, profile, done) {
     return done(null, profile);
@@ -62,14 +62,14 @@ app.get('/', async (req, res) => {
             const games = response.data.response.games;
 
             if (games && games.length > 0) {
-                let gamesInfo = `Hello, ${req.user.displayName}! Here are the games you played in the last 2 weeks:<br><ul>`;
+                let gamesInfo = `Салам, ${req.user.displayName}! Вот в эти игры ты задротил последние 2 недели, сходи траву потрогай чтоли:<br><ul>`;
                 games.forEach(game => {
                     gamesInfo += `<li>${game.name}: ${game.playtime_2weeks} minutes</li>`;
                 });
                 gamesInfo += '</ul>';
                 res.send(gamesInfo);
             } else {
-                res.send(`Hello, ${req.user.displayName}! You haven't played any games in the last 2 weeks.`);
+                res.send(`Салам, ${req.user.displayName}! Ебать, ты 2 недели не прикасался к играм, ебанутый.`);
             }
         } catch (error) {
             res.send(`Error fetching data: ${error}`);
