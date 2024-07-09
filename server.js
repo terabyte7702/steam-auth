@@ -51,6 +51,21 @@ app.post('/logout', (req, res, next) => {
     });
 });
 
+// Функция для получения средней стоимости предмета
+async function getItemPriceInKZT(itemName) {
+    try {
+        const response = await axios.get(`https://steamcommunity.com/market/priceoverview/?appid=730&currency=37&market_hash_name=${encodeURIComponent(itemName)}`);
+        if (response.data && response.data.median_price) {
+            return response.data.median_price;
+        } else {
+            return null;
+        }
+    } catch (error) {
+        console.error(`Error fetching price for item ${itemName}:`, error);
+        return null;
+    }
+}
+
 // Маршрут для отображения главной страницы и данных пользователя
 app.get('/', async (req, res) => {
     if (req.isAuthenticated()) {
@@ -90,24 +105,25 @@ app.get('/', async (req, res) => {
             const nonMarketableItems = [];
 
             if (inventory && inventory.length > 0 && descriptions) {
-                inventory.forEach(item => {
+                for (const item of inventory) {
                     const description = descriptions.find(desc => desc.classid === item.classid && desc.instanceid === item.instanceid);
                     if (description) {
-                        const itemName = description.market_name;
+                        const itemName = description.market_hash_name;
                         const itemIcon = `https://steamcommunity-a.akamaihd.net/economy/image/${description.icon_url}`;
+                        const itemPrice = await getItemPriceInKZT(itemName);
 
                         if (description.marketable === 1) {
-                            marketableItems.push({ name: itemName, icon: itemIcon });
+                            marketableItems.push({ name: itemName, icon: itemIcon, price: itemPrice });
                         } else {
                             nonMarketableItems.push({ name: itemName, icon: itemIcon });
                         }
                     }
-                });
+                }
 
                 if (marketableItems.length > 0) {
                     html += `<p>Вот твой инвентарь CS:GO:</p><ul>`;
                     marketableItems.forEach(item => {
-                        html += `<li><img src="${item.icon}" alt="${item.name}" style="width: 50px; height: 50px;"> ${item.name}</li>`;
+                        html += `<li><img src="${item.icon}" alt="${item.name}" style="width: 50px; height: 50px;"> ${item.name} - ${item.price ? item.price + ' KZT' : 'Цена не найдена'}</li>`;
                     });
                     html += '</ul>';
                 } else {
