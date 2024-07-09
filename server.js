@@ -43,7 +43,7 @@ app.get('/auth/steam/return', passport.authenticate('steam', { failureRedirect: 
 });
 
 // Маршрут для выхода
-app.get('/logout', (req, res) => {
+app.post('/logout', (req, res, next) => {
     req.logout((err) => {
         if (err) { return next(err); }
         res.redirect('/');
@@ -61,16 +61,26 @@ app.get('/', async (req, res) => {
             const response = await axios.get(`http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key=${apiKey}&steamid=${steamID}&format=json`);
             const games = response.data.response.games;
 
+            let html = `<p>Салам, ${req.user.displayName}!</p>`;
+
             if (games && games.length > 0) {
-                let gamesInfo = `Салам, ${req.user.displayName}! Вот в эти игры ты задротил последние 2 недели, сходи траву потрогай чтоли:<br><ul>`;
+                html += `Вот в эти игры ты задротил последние 2 недели, сходи траву потрогай чтоли:<br><ul>`;
                 games.forEach(game => {
-                    gamesInfo += `<li>${game.name}: ${game.playtime_2weeks} minutes</li>`;
+                    html += `<li>${game.name}: ${game.playtime_2weeks} minutes</li>`;
                 });
-                gamesInfo += '</ul>';
-                res.send(gamesInfo);
+                html += '</ul>';
             } else {
-                res.send(`Салам, ${req.user.displayName}! Ебать, ты 2 недели не прикасался к играм, ебанутый.`);
+                html += `Ебать, ты 2 недели не прикасался к играм, ебанутый.`;
             }
+
+            // Добавить кнопку выхода
+            html += `
+                <form action="/logout" method="post">
+                    <button type="submit">Log out</button>
+                </form>
+            `;
+
+            res.send(html);
         } catch (error) {
             res.send(`Error fetching data: ${error}`);
         }
