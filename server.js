@@ -82,21 +82,21 @@ app.get('/', async (req, res) => {
             `;
 
             // Запрос данных инвентаря пользователя
-            const inventoryResponse = await axios.get(`https://steamcommunity.com/inventory/${steamID}/730/2?count=5000`);
+            const inventoryResponse = await axios.get(`https://steamcommunity.com/inventory/${steamID}/730/2?l=russian&count=5000`);
             const inventory = inventoryResponse.data.assets;
             const descriptions = inventoryResponse.data.descriptions;
 
             const marketableItems = [];
             const nonMarketableItems = [];
 
-            if (inventory && inventory.length > 0 && descriptions) {
+            if (inventory && inventory.length > 0) {
                 inventory.forEach(item => {
                     const description = descriptions.find(desc => desc.classid === item.classid && desc.instanceid === item.instanceid);
                     if (description) {
-                        if (description.marketable === 1) {
-                            marketableItems.push(description.market_name);
+                        if (description.marketable) {
+                            marketableItems.push(description.market_hash_name);
                         } else {
-                            nonMarketableItems.push(description.market_name);
+                            nonMarketableItems.push(description.market_hash_name);
                         }
                     }
                 });
@@ -119,16 +119,12 @@ app.get('/', async (req, res) => {
                     html += '</ul>';
                 }
             } else {
-                html += `<p>Ошибка получения данных инвентаря. Долбаеб профиль открой.</p>`;
+                html += `<p>У тебя нет предметов в инвентаре CS:GO.</p>`;
             }
 
             res.send(html);
         } catch (error) {
-            if (error.response && error.response.status === 403) {
-                res.send('Error fetching data: Access is forbidden. Please make sure your profile and inventory are public.');
-            } else {
-                res.send(`Error fetching data: ${error.message}`);
-            }
+            res.send(`Error fetching data: ${error}`);
         }
     } else {
         res.send('Not logged in. <a href="/auth/steam">Log in with Steam</a>');
