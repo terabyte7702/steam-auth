@@ -22,6 +22,7 @@ passport.use(new SteamStrategy({
     realm: 'https://steam-auth.vercel.app/',
     apiKey: '17EA696C4E9C2C11E16BDED1FFC2AC71'
 }, function(identifier, profile, done) {
+    profile.id = identifier.split('/').pop();  // Extract Steam ID
     return done(null, profile);
 }));
 
@@ -79,6 +80,20 @@ app.get('/', async (req, res) => {
                     <button type="submit">Log out</button>
                 </form>
             `;
+
+            // Запрос данных инвентаря пользователя
+            const inventoryResponse = await axios.get(`https://steamcommunity.com/inventory/${steamID}/730/2?l=english&count=5000`);
+            const inventory = inventoryResponse.data.assets;
+
+            if (inventory && inventory.length > 0) {
+                html += `<p>Вот твой инвентарь CS:GO:</p><ul>`;
+                inventory.forEach(item => {
+                    html += `<li>Item ID: ${item.assetid}</li>`;
+                });
+                html += '</ul>';
+            } else {
+                html += `<p>У тебя нет предметов в инвентаре CS:GO.</p>`;
+            }
 
             res.send(html);
         } catch (error) {
