@@ -3,6 +3,8 @@ const session = require('express-session');
 const passport = require('passport');
 const SteamStrategy = require('passport-steam').Strategy;
 const axios = require('axios');
+const bodyParser = require('body-parser');
+const { sendTradeOffer } = require('./tradeBot'); // Импорт функции из tradeBot.js
 
 const app = express();
 
@@ -15,6 +17,7 @@ app.use(session({
 
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(bodyParser.json());
 
 // Настройка стратегии Steam
 passport.use(new SteamStrategy({
@@ -51,17 +54,13 @@ app.post('/logout', (req, res, next) => {
     });
 });
 
-// Функция для получения средней стоимости предмета
+// Функция для получения цены предмета в тенге
 async function getItemPriceInKZT(itemName) {
     try {
         const response = await axios.get(`https://steamcommunity.com/market/priceoverview/?appid=730&currency=37&market_hash_name=${encodeURIComponent(itemName)}`);
-        if (response.data && response.data.median_price) {
-            return response.data.median_price;
-        } else {
-            return null;
-        }
+        return response.data.median_price || response.data.lowest_price || null;
     } catch (error) {
-        console.error(`Error fetching price for item ${itemName}:`, error);
+        console.error(`Error fetching price for ${itemName}: ${error}`);
         return null;
     }
 }
@@ -113,7 +112,7 @@ app.get('/', async (req, res) => {
                         const itemPrice = await getItemPriceInKZT(itemName);
 
                         if (description.marketable === 1) {
-                            marketableItems.push({ name: itemName, icon: itemIcon, price: itemPrice });
+                            marketableItems.push({ name: itemName, icon: itemIcon, price: itemPrice, assetid: item.assetid });
                         } else {
                             nonMarketableItems.push({ name: itemName, icon: itemIcon });
                         }
@@ -123,7 +122,11 @@ app.get('/', async (req, res) => {
                 if (marketableItems.length > 0) {
                     html += `<p>Вот твой инвентарь CS:GO:</p><ul>`;
                     marketableItems.forEach(item => {
-                        html += `<li><img src="${item.icon}" alt="${item.name}" style="width: 50px; height: 50px;"> ${item.name} - ${item.price ? item.price + ' KZT' : 'Цена не найдена'}</li>`;
+                        html += `<li>
+                                    <img src="${item.icon}" alt="${item.name}" style="width: 50px; height: 50px;">
+                                    ${item.name} - ${item.price ? item.price + ' KZT' : 'Цена не найдена'}
+                                    <button onclick="selectItem('${item.assetid}', '${item.name}')">Выбрать</button>
+                                 </li>`;
                     });
                     html += '</ul>';
                 } else {
@@ -141,12 +144,67 @@ app.get('/', async (req, res) => {
                 html += `<p>У тебя нет предметов в инвентаре CS:GO.</p>`;
             }
 
+            // Добавляем скрипт для обработки выбора предметов
+            html += `
+                <script>
+                    let selectedItems = [];
+
+                    function selectItem(assetid, name) {
+                        if (!selectedItems.some(item => item.assetid === assetid)) {
+                            selectedItems.push({ assetid: assetid, name: name });
+                            alert(name + ' добавлен в список для трейда.');
+                        }
+                    }
+
+                    function sendTrade() {
+                        fetch('/sendTrade', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ items: selectedItems })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            alert(data.message);
+                            selectedItems = []; // Очистить список после отправки
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+                    }
+                </script>
+                <button onclick="sendTrade()">Отправить трейд оффер</button>
+            `;
+
             res.send(html);
         } catch (error) {
             res.send(`Error fetching data: ${error}`);
         }
     } else {
         res.send('Not logged in. <a href="/auth/steam">Log in with Steam</a>');
+    }
+});
+
+// Маршрут для отправки трейд оффера
+app.post('/sendTrade', async (req, res) => {
+    if (req.isAuthenticated()) {
+        const steamID = req.user.id;
+        const items = req.body.items;
+
+        if (!items || items.length === 0) {
+            return res.status(400).json({ message: 'No items selected' });
+        }
+
+        try {
+            // Отправляем трейд оффер
+            sendTradeOffer(steamID, items);
+            res.json({ message: 'Trade offer sent!' });
+        } catch (error) {
+            res.status(500).json({ message: `Error sending trade offer: ${error.message}` });
+        }
+    } else {
+        res.status(401).json({ message: 'Not authenticated' });
     }
 });
 
