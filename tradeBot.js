@@ -1,6 +1,7 @@
 const SteamUser = require('steam-user');
 const SteamCommunity = require('steamcommunity');
 const TradeOfferManager = require('steam-tradeoffer-manager');
+const SteamTotp = require('steam-totp');
 const config = require('./config.json'); // Конфигурационный файл с данными бота
 
 const client = new SteamUser();
@@ -15,41 +16,44 @@ const manager = new TradeOfferManager({
 client.logOn({
     accountName: config.accountName,
     password: config.password,
-    twoFactorCode: SteamTotp.getAuthCode(config.sharedSecret)
+    twoFactorCode: SteamTotp.generateAuthCode(config.sharedSecret)
 });
 
 client.on('loggedOn', () => {
-    console.log('Logged into Steam');
+    console.log('Bot logged in');
     client.setPersona(SteamUser.Steam.EPersonaState.Online);
+    client.gamesPlayed(730);
 });
 
 client.on('webSession', (sessionID, cookies) => {
     manager.setCookies(cookies);
     community.setCookies(cookies);
-    community.startConfirmationChecker(30000, config.identitySecret); // Подтверждение трейдов каждые 30 секунд
 });
 
-function sendTradeOffer(steamID, items) {
-    const offer = manager.createOffer(steamID);
+function sendTradeOffer(partnerSteamID, items) {
+    const offer = manager.createOffer(partnerSteamID);
 
-    // Добавление выбранных предметов в трейд оффер
     items.forEach(item => {
-        offer.addMyItem({
-            assetid: item.assetid,
-            appid: 730,
-            contextid: 2
-        });
+        offer.addTheirItem({ appid: 730, contextid: 2, assetid: item.assetid });
     });
 
-    offer.setMessage('Here are your selected items!');
     offer.send((err, status) => {
         if (err) {
             console.log(`Error sending trade offer: ${err.message}`);
             return;
         }
-        console.log(`Trade offer sent! Status: ${status}`);
+
+        console.log(`Trade offer sent, status: ${status}`);
+        if (status === 'pending') {
+            community.acceptConfirmationForObject(config.identitySecret, offer.id, (err) => {
+                if (err) {
+                    console.log(`Error confirming trade offer: ${err.message}`);
+                } else {
+                    console.log('Trade offer confirmed');
+                }
+            });
+        }
     });
 }
 
-// Экспорт функции для использования в основном сервере
 module.exports = { sendTradeOffer };
