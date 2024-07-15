@@ -1,0 +1,6 @@
+{
+    "accountName": "your_bot_account_name",
+    "password": "your_bot_password",
+    "sharedSecret": "your_shared_secret",
+    "identitySecret": "your_identity_secret"
+}
