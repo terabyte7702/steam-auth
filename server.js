@@ -146,7 +146,7 @@ app.get('/', async (req, res) => {
             res.send(`Error fetching data: ${error}`);
         }
     } else {
-        res.send('Not logged in. <a href="/auth/steam">Log in with Steam</a>');
+        res.send('Залогинься in. <a href="/auth/steam">Log in with Steam</a>');
     }
 });
 
